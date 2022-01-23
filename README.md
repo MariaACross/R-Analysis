@@ -1,3 +1,3 @@
 # R-Analysis
 
-This Repository contains all my Analytical porjects done in R
+This Repository contains all my Analytical Projects done in R
