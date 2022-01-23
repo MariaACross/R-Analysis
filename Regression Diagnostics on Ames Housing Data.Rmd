@@ -1,0 +1,343 @@
+---
+title: "Module 1 Assignment- Regression Diagnostics with R"
+author: "Maria Cross"
+date: "1/16/2022"
+output:
+  html_document: default
+  pdf_document: default
+  
+---
+ 
+    Course: ALY6015- Intermediate Analytics 
+  
+    Professor: Vladimir Shapiro 
+  
+    COllege: College of Professional Studies, Northeastern University 
+ 
+ 
+## INTRODUCTION:
+
+The Ames Dataset comprises data about residential properties sold in Ames, Iowa between 2006 and 2010.The majority of the variables refer to details that a potential house buyer would want to know about a house.
+It has 2930 rows and 82 attributes which shows that the price of the houses in Ames depend on various factors. In this Assignment, I have performed Regression on the Ames dataset.
+The Analysis involves descriptive statistics, Data cleaning, Correlation Analysis, Multicollinearity Analysis and Regression Analysis until the best model is found.
+
+**1. Load the Ames housing dataset**
+```{r}
+Data<- read.csv("/Users/MariaAnisha/Downloads/AmesHousing.csv",header = TRUE)
+options(max.print=999999)
+```
+
+#installing relevant packages
+
+install.packages('tinytex')
+
+library(psych)
+
+library(Hmisc)
+
+library(dplyr)
+
+library(ggplot2)
+
+library(corrplot)
+
+library(caret)
+
+library(performance)
+
+library(lmtest)
+
+library(pastecs)
+
+install.packages('faraway')
+
+library(faraway)
+
+library(RColorBrewer)
+
+
+
+**#2 Perform Exploratory Data Analysis and use descriptive statistics to describe the data**
+
+As part of EDA, I have first performed Data Cleaning. As shown below, I have checked for null values. There are 13960 null values which are cleant in the next step..
+```{r}
+#Data Cleaning
+#Checking for Missing/Null Values
+sum(is.na(Data))
+```
+While checking for redundant values, it is seen that there are no duplicate values.
+
+```{r}
+sum(duplicated(Data))
+
+```
+```{r}
+#View Histogram of SalePrice Variable
+par(mfrow=c(1,2))
+hist(Data$SalePrice/100,xlim=c(0,5000),xlab='housing price',ylab='Frequency',main="Histrogram of Sale Price",col='red')
+```
+
+This histogram of the sale prices of different houses shows us that most of the houses are priced between 100k and 200k. It follows a normal distribution. 
+
+```{r}
+library(ggplot2)
+#Boxplot of Sale Condition and Sale Price
+ggplot(Data, aes(x = Sale.Condition, y = log(SalePrice))) +
+  geom_boxplot() + xlab("Sale Type") + 
+  ylab("log Sale Price") + 
+  ggtitle("Relation between Sale Condition and Sale Price")
+```
+
+This plot gives the relation between Sale Condition and Sale Price. There are a few outliers in Abnormal, Normal and Family sales. It is seen that Partial sales have the highest price median while adjoining land purchases have the least median price.
+
+```{r}
+#Boxplot between House style and sale price
+ggplot(Data, aes(x = House.Style, y = log(SalePrice))) +
+  geom_boxplot() + xlab("Sale Type") + 
+  ylab("log Sale Price") + 
+  ggtitle("Relation between House Style and Sale Price")
+```
+
+This Boxplot shows the presence of outliers in the data. It is obseved that houses with 2 and half floors completely finished has the highest median price, while houses with 1 and half floors unfinished have the least median price.
+
+
+```{r}
+#View Scatter Plot for Sale Price vs Year built
+plot(log(SalePrice)~Year.Built, data= Data)
+
+```
+
+This scatter plot shows the relationship between the Price of the house and age of the house, by considering which year it was built in. It is seen that most of the hosues range within a similar price range irrespective of when it was built.
+
+```{r}
+#View Scatterplot for Sale Price vs Overall Quality
+plot(log(SalePrice)~Overall.Qual, data= Data)
+```
+
+In the above the scatter plot between Sale Price and Overall Quality, we see how Sale Price is dependent on the overall quality of the house, The price of the house increases with the quality.
+
+
+Descriptive Statistics
+
+To gain a clear picture of each parameter in the dataset, I utilized R's summary() and str() function. Each column's data types, minimum, maximum, mean, median, 1st quartile, and 3rd quartile values are listed below. 
+
+```{r}
+#Viewing Summary of the data
+summary(Data)
+
+#Viewing Stucture of the data
+str(Data)
+```
+
+
+**3. Prepare the dataset for modeling by imputing missing values with the variable's mean value or any other value that you prefer.**
+
+In this step Data is being cleant by replacing all null values with the mean of the values.
+```{r}
+newdata <- Data
+newdata[sapply(newdata, is.numeric)] <- lapply(newdata[sapply(newdata, is.numeric)],function(x) ifelse(is.na(x),mean(x, na.rm = TRUE), x))
+
+summary(newdata)
+```
+
+**4. Use the cor() function to produce a correlation matrix of the numeric values.**
+
+The cor() function gives us the correlation matrix between all the variables. As seen below, all the correlation coeffecients between all possible pairs of variables are shown. It tells us the level of correlation between the two variables.
+
+```{r}
+corTable <- cor(newdata[sapply(newdata, is.numeric)])
+corTable
+
+```
+
+**5. Produce a plot of the correlation matrix, and explain how to interpret it. (hint - check the corrplot or ggcorrplot plot libraries)**
+
+In the correlation chart, the scale, which is colored from dark blue to red, is located on the right hand side. Positive correlation is represented by blue, while negative correlation is represented by red. According to the degree of the Correlation, the color follows the gradient. It is seen that Sale Price and Overall Quality have the highest correlation while the least correlation is seen between PID and Sales Price.
+
+```{r}
+library(corrplot)
+corrplot(corTable,tl.cex = 0.5)
+
+```
+
+**6. Make a scatter plot for the X continuous variable with the highest correlation with SalePrice. Do the same for the X variable that has the lowest correlation with SalePrice. Finally, make a scatter plot between X and SalePrice with the correlation closest to 0.5. Interpret the scatter plots and describe how the patterns differ.**
+
+The correlation charts demonstrate that the house sale price has a significant correlation with overall housing quality and the least link with Miscellaneous value. Which means that customers who are purchasing a more expensive home are more concerned with the overall quality of the home and less concerned with the various values it has. Also, there is a 0.5 correlation with Lot frontage, implying that people are concerned about the frontage lot. All these are shown in the scatter plots below
+
+```{r}
+#scatter plot for higher correlation
+plot(newdata$Overall.Qual,newdata$SalePrice, main = "Scatter Plot For Highest Correlation Sales Price", xlab = "Overall Qual", ylab = "Sales Price")
+
+# scatter plot for lowest correlation
+plot(newdata$PID,newdata$SalePrice, main = "Scatter Plot For Lowest Correlation Sales Price", xlab = "PID", ylab = "Sales Price")
+
+
+# scatter plot for correlation closest to 0.5
+plot(newdata$Mas.Vnr.Area,newdata$SalePrice, main = "Scatter Plot For Correlation closest to 0.5", xlab = "Mas.Vnr.Area", ylab = "Sales Price")
+```
+
+**7. Using at least 3 continuous variables, fit a regression model in R.**
+
+I have used 3 Continuous variables- Year Built, Year Remodeled and Above Ground Living Area to generate the below regression model. The residuals show us the difference between actual and predicted values of Sales Price while coefficients give us the intercept and coefficients of the variables that would later be used in formulating the regression equation. The R2 value is 0.643 and p value is <0.05.
+
+```{r}
+#Fit Model
+#Model the data
+Model <- lm(SalePrice ~ Year.Built + Year.Remod.Add + log(Gr.Liv.Area), data = newdata)
+Model
+```
+
+```{r}
+summary(Model)
+
+```
+```{r}
+AIC(Model)
+BIC(Model)
+```
+
+
+**8. Report the model in equation form and interpret each coefficient of the model in the context of this problem.**
+```{r}
+summary(Model)$coefficient
+```
+This regression model can be represented in the equation form as shown:
+
+Saleprice= -3591789.0798+ 831.0174*Year.Built + 573.2112*Year.Remod.Add + 137318.5181*log(Gr.Liv.Area)
+
+The sign of a regression coefficient indicates whether each independent variable and the dependent variable have a positive or negative relationship. The Year Built coefficient in the regression equation is 831. This coefficient represents the mean increase of Sales Price for every additional year in the Year Built Column. Similarly, for every 573 years increase in the date of Remodeling, the Sales Price is increasing and also for every 137318 sq ft of above ground living area.
+
+**9. Use the plot() function to plot your regression model. Interpret the four graphs that are produced.**
+```{r}
+
+plot(Model)
+
+```
+
+
+The **Residual vs Fitted graph** shows the non linear residual patterns. This graph shows if the predictor and outcome variables have a non-linear relationship. It demonstrates that some outliers have a linear relationship in our regression model.
+The non-linear distribution of plots is shown by the usual **Q-Q plot**. All of the points in our case fall roughly along this reference line up to a specific number, after which we can assume normality.
+The **Scale Location Plot** shows how the residuals are distributed among the predictor variables. The variability (variances) of the residual points rises with the value of the fitted outcome variable, indicating that the residuals errors have non-constant variances.
+ **Residuals vs Leverage Plot** can show us the outliers and leverage points,
+
+
+**10. Check your model for multicollinearity and report your findings. What steps would you take to correct multicollinearity if it exists?**
+```{r}
+library(car)
+vif(Model)
+```
+
+The vif() function helps us check for multicollinearity in our regression model. If the value is >10,  it implies that multicollinearity exists. In our model, all variables have values <10 which shows that there is no multicollinearity in our model. 
+
+
+**11 Check your model for outliers and report your findings. Should these observations be removed from the model?**
+
+```{r}
+plot(cooks.distance(Model), pch = 19, cex = 1, main = "Cooks Distance")
+car::outlierTest(Model)
+
+```
+
+To find outliers, I used the Multivariate Model method. Cook's distance can be calculated with regard to a certain regression model, hence it is influenced by the x-variables used in the model. It determines the impact of each data point on the expected result.
+Based on this model, the outlier Test returns the most extreme observations. According to the findings, row 1768 is the most extreme. 
+
+These observations are to be removed as shown in the next step.
+
+**12. Attempt to correct any issues that you have discovered in your model. Did your changes improve the model, why or why not?**
+
+In this model, there are outliers present which are removed as shown below. Since there is no multicollinearity, no other changes are to be made.
+```{r}
+cleandata<-newdata[-c(45,1768,1761,1064,1638,433,2446,434,424,2451),]
+```
+```{r}
+newModel <- lm(SalePrice ~ Year.Built + Year.Remod.Add + log(Gr.Liv.Area), data = cleandata)
+newModel
+car::outlierTest(newModel)
+```
+
+The summary of the new regression model after removing outliers shows us an improved R2 value of 0.643 which shows that removing the outliers has improved our model.
+
+```{r}
+summary(newModel)
+```
+
+**13. Use the all subsets regression method to identify the "best" model. State the preferred model in equation form.**
+
+The regsubsets() function generates the best subset by analysing the best model with the specified number of predictors. It lists the variables that were tested in each run. It compares Mallow Cp, Adjusted R2, and BIC in a number of ways.
+
+```{r}
+library(leaps)
+Var <- which(sapply(cleandata, is.numeric))
+Vars <- cleandata[, Var]
+fits <- regsubsets(Vars$SalePrice ~.,Vars)
+subset21 <- summary(fits)
+subset21
+```
+
+```{r}
+#Forward and Backward stepwise selection
+fwd <- regsubsets(Vars$SalePrice~., Vars, method = "forward")
+summary(fwd)
+bwd<- regsubsets(Vars$SalePrice~., Vars, method = "backward")
+summary(bwd)
+
+names(subset21)
+subset21$rsq   
+```
+
+```{r}
+
+par(mfrow=c(2,2))
+plot(subset21$rss, xlab="Variables Count ",ylab="RSS",type="l")
+plot(subset21$adjr2 ,xlab="Variables Count ", ylab="Adjusted RSquare",type="l")
+# which.max(subs$adjr2)
+points(11,subset21$adjr2[11], col="blue",cex=2,pch=19)
+plot(subset21$cp ,xlab="Variables Count",ylab="CP", type='l')
+
+# which.min(subs$cp )
+points(10,subset21$cp [10],col="green",cex=2,pch=20)
+plot(subset21$bic ,xlab="Variables Count ",ylab="BIC",type='l')
+
+# which.min(reg.summary$bic )
+points(6,subset21$bic [6],col="black",cex=2,pch=20)
+
+coef(fits,8)
+
+```
+
+The graphs above show us that better results are expected with a model which has 8 of the best fit variables. These variables are computed and the equation is as follows to give us the *best* model:
+
+    Salesprice = -899505.69711 + -155.73955*MS.SubClass + 29705.85939 *OverallQual + 430.10073* Year.Remod.Add + 63.51552*Mas.Vnr.Area + 24.87456*BsmtFin.SF.1 + 4271.12377*Bsmt.Half.Bath + 71.18576*Garage.Area + 284.49677*Mo.Sold
+
+**14. Compare the preferred model from step 13 with your model from step 12. How do they differ? Which model do you prefer and why?**
+
+```{r}
+bestModel <- lm(SalePrice ~ MS.SubClass +Overall.Qual+ Year.Remod.Add +Mas.Vnr.Area +BsmtFin.SF.1+ Bsmt.Half.Bath+  Garage.Area + Mo.Sold, data = cleandata)
+summary(bestModel)
+```
+
+The best model shows that the R2 value is 0.7494 which is better than the previous model. Therefore, I prefer the model with 8 variables. Because all these variables are highly correlated and have better impact on results.
+
+## CONCLUSION
+
+The sales price of a house is directly related to the number of amenities such as frontage lot, large parking space in garage for parking multiple cars, number of full baths, and many others, as well as the overall condition and quality of the house, according to the analysis of the Ames Housing dataset. This has also been referenced by doing linear regression on the dataset and developing a model for it. Meanwhile, buyers of less costly homes have been observed adjusting some of these characteristics, lowering the value of the home listing. It is also seen that the regression model built with the 8 variables is the best model.
+
+## REFERENCES
+
+RPubs - Ames Housing Dataset Analysis
+RPubs - Ames Housing Dataset Analysis. (2020). Retrieved 17 January 2022, from https://rpubs.com/RobbyS/622233
+
+Essentials, L.
+Essentials, L. (2018). Linear Regression Assumptions and Diagnostics in R: Essentials - Articles - STHDA. Retrieved 17 January 2022, from http://www.sthda.com/english/articles/39-regression-model-diagnostics/161-linear-regression-assumptions-and-diagnostics-in-r-essentials/
+
+outlierTest function - RDocumentation
+outlierTest function - RDocumentation. (2022). Retrieved 17 January 2022, from https://www.rdocumentation.org/packages/car/versions/3.0-12/topics/outlierTest
+
+RPubs - Subset Selection Methods
+RPubs - Subset Selection Methods. (2015). Retrieved 17 January 2022, from https://rpubs.com/davoodastaraky/subset
+
+Frost, J.
+Frost, J. (2018). Interpreting Correlation Coefficients. Retrieved 17 January 2022, from https://statisticsbyjim.com/basics/correlations/
+
+Outlier Treatment With R | Multivariate Outliers
+Outlier Treatment With R | Multivariate Outliers. (2022). Retrieved 17 January 2022, from http://r-statistics.co/Outlier-Treatment-With-R.html
